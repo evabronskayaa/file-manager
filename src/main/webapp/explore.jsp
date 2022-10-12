@@ -3,20 +3,17 @@
 <html>
 <head>
     <title>File Manager</title>
-    <style>
-        a {
-            text-decoration: none; /* Убираем подчёркивание */
-        }
-    </style>
 </head>
-
 <body>
-<h4>${date}</h4>
+<form method="post">
+    <input type="submit" name="exit" value="Exit"/>
+</form>
+<h3>${date}</h3>
 <hr>
-<h2>${currentPath}</h2>
+<h4>${currentPath}</h4>
 <hr>
 
-<a href="?path=${currentPath.substring(0, currentPath.lastIndexOf("/") + (currentPath.lastIndexOf("/") != currentPath.indexOf("/") ? 0 : 1))}">Up</a><br>
+<a href="?path=${currentPath.substring(0, currentPath.lastIndexOf("\\") + (currentPath.lastIndexOf("\\") != currentPath.indexOf("\\") ? 0 : 1))}">Up</a><br>
 <c:forEach var="directory" items="${directories}">
     <a href="?path=${directory.getAbsolutePath()}">${directory.getName()}/</a><br>
 </c:forEach>
