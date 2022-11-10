@@ -11,16 +11,7 @@ import java.sql.SQLException;
 public class LoginServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        User user;
-        try {
-            user = UserRepository.USER_REPOSITORY.getUserByCookies(req.getCookies());
-        } catch (SQLException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-        if (user != null) {
-            resp.sendRedirect(req.getContextPath() + "/");
-            return;
-        }
+        User user = UserRepository.USER_REPOSITORY.getUserByCookies(req.getCookies());
 
         RequestDispatcher requestDispatcher = req.getRequestDispatcher("login.jsp");
 
@@ -38,17 +29,13 @@ public class LoginServlet extends HttpServlet {
             return;
         }
 
-        try {
-            User user = UserRepository.USER_REPOSITORY.getUser("login", login);
-            if (user == null || !user.getPassword().equals(password)) {
-                resp.sendRedirect(req.getContextPath() + "/login");
-                return;
-            }
-
-            UserRepository.USER_REPOSITORY.addUserBySession(CookieUtil.getValue(req.getCookies(), "JSESSIONID"), user);
-            resp.sendRedirect(req.getContextPath() + "/");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        User user = UserRepository.USER_REPOSITORY.getUser(login);
+        if (user == null || !user.getPassword().equals(password)) {
+            resp.sendRedirect(req.getContextPath() + "/login");
+            return;
         }
+        CookieUtil.addCookie(resp, "login", login);
+        CookieUtil.addCookie(resp, "password", password);
+        resp.sendRedirect(req.getContextPath() + "/");
     }
 }
