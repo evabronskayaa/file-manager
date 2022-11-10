@@ -2,7 +2,6 @@ package org.example;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -11,33 +10,40 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-@WebServlet(urlPatterns = "/")
 public class FileManagerServlet extends HttpServlet {
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+    private static final boolean WIN = System.getProperty("os.name").toLowerCase().startsWith("win");
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
-        User user = UserRepository.USER_REPOSITORY.getUserByCookies(req.getCookies());
+        User user;
+        try {
+            user = UserRepository.USER_REPOSITORY.getUserByCookies(req.getCookies());
+        } catch (SQLException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         if (user == null) {
-            resp.sendRedirect("/login");
+            resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
 
         String path = req.getParameter("path");
-        if (path == null || !path.startsWith("/home/" + user.getLogin() + "/")) {
-            path = "/home/" + user.getLogin() + "/";
+        String startPath = WIN ? "C:" + File.separator + user.getLogin() + File.separator : "/home/" + user.getLogin() + "/";
+        if (path == null || !path.startsWith(startPath)) {
+            path = startPath;
         }
 
         path = path.replaceAll("%20", " ");
 
         File currentPath = new File(path);
         if (!currentPath.exists()) {
-            currentPath.mkdir();
+            currentPath.mkdirs();
         }
 
         if (currentPath.isDirectory()) {
@@ -45,6 +51,7 @@ public class FileManagerServlet extends HttpServlet {
 
             req.setAttribute("date", DATE_FORMAT.format(new Date()));
             req.setAttribute("currentPath", path);
+            req.setAttribute("upPath", path.substring(0, path.lastIndexOf(File.separator) + (path.lastIndexOf(File.separator) != path.indexOf(File.separator) ? 0 : 1)));
 
             RequestDispatcher requestDispatcher = req.getRequestDispatcher("explore.jsp");
             requestDispatcher.forward(req, resp);
@@ -56,9 +63,13 @@ public class FileManagerServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         if (req.getParameter("exit") != null) {
-            UserRepository.USER_REPOSITORY.removeUserBySession(CookieUtil.getValue(req.getCookies(), "JSESSIONID"));
+            try {
+                UserRepository.USER_REPOSITORY.removeUserBySession(CookieUtil.getValue(req.getCookies(), "JSESSIONID"));
+            } catch (SQLException | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
             CookieUtil.addCookie(resp, "JSESSIONID", null);
-            resp.sendRedirect("/");
+            resp.sendRedirect(req.getContextPath() + "/");
         }
     }
 
